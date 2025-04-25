@@ -4,7 +4,7 @@ const admin = require('firebase-admin')
 const serviceAccount = require('./newsweb-ef5bf-firebase-adminsdk-fbsvc-3f13a54e64.json')
 const bodyParser = require('body-parser');
 //const commentRouter = require('./routes/commentRoute');
-//const newsRouter = require('./routes/newsRoute');
+const newsRouter = require('./routes/newsRoute');
 const userRouter = require('./routes/userRoute');
 var cors = require('cors');
 
@@ -19,7 +19,7 @@ app.use(bodyParser.json());
 app.use(cors());
 
 //app.use('/comment', commentRouter);
-//app.use('/news', newsRouter)
+app.use('/news', newsRouter)
 app.use('/user', userRouter)
 
 app.listen(port, () => {
