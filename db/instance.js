@@ -19,3 +19,5 @@ pool.connect((err) => {
     }
     console.log("Connected to PostgreSQL database")
 })
+
+module.exports = pool

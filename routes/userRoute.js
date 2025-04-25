@@ -36,3 +36,5 @@ router.post('/login',
 )
 
 router.post('/changeprofpic', upload.single('profilePicture'), userController.changeProfilePicture)
+
+module.exports = router

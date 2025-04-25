@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator')
 const pool = require('../db/instance')
-const bycrypt = require('crypto')
+const bycrypt = require('bcrypt')
 const admin = require('firebase-admin')
 
 async function createAccount(req, res) {
@@ -65,13 +65,13 @@ async function changeProfilePicture (req, res) {
             return res.status(400).json({ message: "No image file provided" })
         }
 
-        const userId = req.body
-        if(userId){
+        const userId = req.body.userId
+        if(!userId){
             return res.status(400).json({ message: "User ID is required" })
         }
 
         const timestamp = Date.now()
-        const filename = `profile-picture/${userId}_${timestamp}`
+        const filename = `Profile Picture/${userId}_${timestamp}`
 
         const storage = admin.storage().bucket()
 
@@ -79,7 +79,7 @@ async function changeProfilePicture (req, res) {
 
         const blobStream = fileUpload.createWriteStream({
             metadata:{
-                contentType: req.file.mimetypr
+                contentType: req.file.mimetype
             },
             resumable: false
         })
@@ -105,7 +105,7 @@ async function changeProfilePicture (req, res) {
 
                 res.status(200).json({ message: "Profile picture changed successfully", 
                     profilePictureUrl: publicUrl, 
-                    user: updateResult.row[0] 
+                    user: updateResult.rows[0]
                 })
             }
             catch(error){
