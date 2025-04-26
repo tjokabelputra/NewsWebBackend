@@ -187,14 +187,14 @@ async function newsDetail(req, res) {
         )
 
         const likeInfo = await pool.query(
-            `SELECT liked_status
+            `SELECT likes_status
             FROM likednews
             WHERE uid = $1 AND newsid = $2`, [uid, newsid]
         )
 
         let userLikeStatus = null;
         if (likeInfo.rows.length > 0) {
-            userLikeStatus = likeInfo.rows[0].liked_status;
+            userLikeStatus = likeInfo.rows[0].like_status;
         }
 
         const result = {
@@ -211,7 +211,7 @@ async function newsDetail(req, res) {
 
 async function allNews(req, res) {
     
-    const category = req.params 
+    const { category } = req.params 
     const { search = "" } = req.body
 
     try{
@@ -237,7 +237,7 @@ async function allNews(req, res) {
                 value.push(`%${search}%`)
             }
             else{
-                query += ` AND title ILIKE $1`
+                query += ` WHERE title ILIKE $1`
                 value.push(`%${search}%`)
             }
         }
