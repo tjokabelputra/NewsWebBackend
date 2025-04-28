@@ -1,4 +1,5 @@
 const { validationResult } = require('express-validator')
+const jwt = require('jsonwebtoken')
 const pool = require('../db/instance')
 const bycrypt = require('bcrypt')
 const admin = require('firebase-admin')
@@ -48,7 +49,23 @@ async function loginAccount(req, res){
             WHERE email = $1 AND PASSWORD = $2`, [email, hash]
         )
         if(user.rowCount > 0){
-            return res.status(200).json({ message: "Log in successful", account: user })
+            const payload = {
+                uid: user.rows[0].uid,
+                username: user.rows[0].username,
+                email: user.rows[0].email,
+                role: user.rows[0].role,
+                profile_pic: user.rows[0].profile_pic
+            }
+
+
+            const secret = process.env.JWT_SECRET
+            const token = jwt.sign(payload, secret, { expiresIn: '1d' })
+
+            return res.status(200).json({
+                message: "Login successful",
+                account: payload,
+                token: token,
+            })
         }
         else{
             return res.status(404).json({ message: "Account doesn't exist" })
