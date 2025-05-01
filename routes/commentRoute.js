@@ -27,6 +27,6 @@ router.put('/like',
     ], commentController.updateLike
 )
 
-router.delete('/delete/:newsid', commentController.deleteComment)
+router.delete('/delete/:commentid', commentController.deleteComment)
 
 module.exports = router
