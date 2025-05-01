@@ -45,6 +45,7 @@ router.get('/home', newsController.homePageNews)
 
 router.get('/detail/:newsid',
     [
+        check('newsid').not().isEmpty(),
         check('uid').not().isEmpty()
     ], newsController.newsDetail
 )
@@ -73,6 +74,12 @@ router.put('/like',
         check('newsid').not().isEmpty(),
         check('pressed').not().isEmpty()
     ], newsController.changeLike
+)
+
+router.put('/views/:newsid',
+    [
+        check('newsid').not().isEmpty()
+    ], newsController.updateViews
 )
 
 router.delete('/delete/:newsid',

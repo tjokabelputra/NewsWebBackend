@@ -1,6 +1,6 @@
 const { validationResult} = require('express-validator')
 const pool = require('../db/instance')
-const adminn = require('firebase-admin')
+const admin = require('firebase-admin')
 
 async function createNews(req, res){
     const errors = validationResult(req)
@@ -17,7 +17,7 @@ async function createNews(req, res){
         }
 
         const timestamp = Date.now()
-        const storage = adminn.storage().bucket()
+        const storage = admin.storage().bucket()
 
         const bannerFileName = `News Banner/${createdby}_${timestamp}_banner`
         const bannerFileUpload = storage.file(bannerFileName)
@@ -126,7 +126,7 @@ async function homePageNews(req, res) {
                 title
             FROM news
             ORDER BY createdat desc
-            LIMIT 5`
+            LIMIT 4`
         )
         
         const latestCategories = await pool.query(
@@ -139,12 +139,12 @@ async function homePageNews(req, res) {
                     n.category,
                     n.createdat::date as created_date,
                     n.title,
-                    ROW_NUMBER() OVER (PARTITION BY category) AS rank
+                    ROW_NUMBER() OVER (PARTITION BY category ORDER BY n.createdat DESC) AS rank
                 FROM news AS n
                 INNER JOIN users AS u
                 ON n.createdby = u.uid
             ) ranked_news
-            WHERE rank <= 5`
+            WHERE rank <= 4`
         )
 
         return res.status(200).json({ 
@@ -187,7 +187,7 @@ async function newsDetail(req, res) {
         )
 
         const likeInfo = await pool.query(
-            `SELECT likes_status
+            `SELECT like_status
             FROM likednews
             WHERE uid = $1 AND newsid = $2`, [uid, newsid]
         )
@@ -242,6 +242,7 @@ async function allNews(req, res) {
             }
         }
 
+        query += ` ORDER BY createdat DESC`
         query += ` LIMIT 100`
 
         const result = await pool.query(query, value)
@@ -408,6 +409,27 @@ async function changeLike(req, res) {
     }
 }
 
+async function updateViews(req, res) {
+    const errors = validationResult(req)
+
+    if(!errors.isEmpty()){
+        return res.status(422).json({ message: "Invalid input, please check your data" })
+    }
+
+    try{
+        const { newsid } = req.params
+        const updateView = await pool.query(
+            `UPDATE news
+            SET views = views + 1
+            WHERE newsid = $1`, [newsid]
+        )
+        return res.status(200).json({ message: "Views updated successfully" })
+    }
+    catch (error){
+        return res.status(500).json({ message: error.message })
+    }
+}
+
 async function deleteNews(req, res) {
     const errors = validationResult(req)
 
@@ -416,8 +438,35 @@ async function deleteNews(req, res) {
     }
 
     const { newsid } = req.params
+    const storage = admin.storage().bucket()
 
     try{
+        const newsResult = await pool.query(
+            `SELECT banner_url, image_url 
+            FROM news 
+            WHERE newsid = $1`, [newsid]
+        )
+
+        if(newsResult.rowCount === 0){
+            return res.status(404).json({ message: "News not found" })
+        }
+
+        const news = newsResult.rows[0]
+
+        try {
+            if(news.banner_url){
+                const bannerPath = news.banner_url.replace(`https://storage.googleapis.com/${storage.name}/`, '');
+                await storage.file(bannerPath).delete()
+            }
+            if(news.image_url){
+                const imagePath = news.image_url.replace(`https://storage.googleapis.com/${storage.name}/`, '');
+                await storage.file(imagePath).delete()
+            }
+        }
+        catch (error) {
+            return res.status(500).json({ message: error.message })
+        }
+
         await pool.query(
             `DELETE FROM news
             WHERE newsid = $1`, [newsid]
@@ -462,6 +511,7 @@ module.exports = {
     savedNews,
     createdNews,
     changeLike,
+    updateViews,
     deleteNews,
     unsaveNews
 }
