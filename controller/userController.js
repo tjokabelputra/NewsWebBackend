@@ -1,7 +1,7 @@
 const { validationResult } = require('express-validator')
 const jwt = require('jsonwebtoken')
 const pool = require('../db/instance')
-const bycrypt = require('bcrypt')
+const bcrypt = require('bcrypt')
 const admin = require('firebase-admin')
 
 async function createAccount(req, res) {
@@ -12,7 +12,7 @@ async function createAccount(req, res) {
     }
 
     const { username, email, password } = req.body; 
-    const hash = bycrypt.hash(password, 10)
+    const hash = await bcrypt.hash(password, 10)
 
     try{
         const findAccount = await pool.query(
@@ -24,9 +24,9 @@ async function createAccount(req, res) {
         }
         const newAccount = await pool.query(
             `INSERT INTO users (username, email, password)
-            VALUES $1, $2, $3 RETURNING *`, [username, email, hash] 
+            VALUES ($1, $2, $3) RETURNING *`, [username, email, hash]
         )
-        return res.status(201).json({ message: "Account Created Successfully", account: newAccount })
+        return res.status(201).json({ message: "Account Created Successfully", account: newAccount.rows[0] })
     }
     catch(errors){
         return res.status(500).json({ message: errors.message })
@@ -41,35 +41,39 @@ async function loginAccount(req, res){
     }
 
     const { email, password } = req.body
-    const hash = bycrypt.hash(password, 10)
     
     try{
         const user = await pool.query(
-            `SELECT * FROM users
-            WHERE email = $1 AND PASSWORD = $2`, [email, hash]
-        )
-        if(user.rowCount > 0){
-            const payload = {
-                uid: user.rows[0].uid,
-                username: user.rows[0].username,
-                email: user.rows[0].email,
-                role: user.rows[0].role,
-                profile_pic: user.rows[0].profile_pic
-            }
+            `SELECT * FROM users WHERE email = $1`, [email]
+        );
 
-
-            const secret = process.env.JWT_SECRET
-            const token = jwt.sign(payload, secret, { expiresIn: '1d' })
-
-            return res.status(200).json({
-                message: "Login successful",
-                account: payload,
-                token: token,
-            })
+        if (user.rowCount === 0) {
+            return res.status(404).json({ message: "Account doesn't exist" });
         }
-        else{
-            return res.status(404).json({ message: "Account doesn't exist" })
+
+        const passwordMatch = await bcrypt.compare(password, user.rows[0].password);
+
+        if (!passwordMatch) {
+            return res.status(401).json({ message: "Invalid credentials" });
         }
+
+        const payload = {
+            uid: user.rows[0].uid,
+            username: user.rows[0].username,
+            email: user.rows[0].email,
+            role: user.rows[0].role,
+            profile_pic: user.rows[0].profile_pic
+        }
+
+
+        const secret = process.env.JWT_SECRET
+        const token = jwt.sign(payload, secret, { expiresIn: '1d' })
+
+        return res.status(200).json({
+            message: "Login successful",
+            account: payload,
+            token: token,
+        })
     }
     catch(errors){
         return res.status(500).json({ message: errors.message })
