@@ -1,10 +1,12 @@
 const express = require('express')
 const commentController = require('../controller/commentController')
 const { check } = require('express-validator')
+const { accessValidation } = require("../middleware/auth");
 
 const router = express.Router()
 
 router.post('/create',
+    accessValidation,
     [
         check('uid').not().isEmpty(),
         check('newsid').not().isEmpty(),
@@ -14,12 +16,12 @@ router.post('/create',
 
 router.get('/newsComment',
     [
-        check('uid').not().isEmpty(),
         check('newsid').not().isEmpty()
     ], commentController.readNewsComment
 )
 
 router.put('/like',
+    accessValidation,
     [
         check('uid').not().isEmpty(),
         check('commentid').not().isEmpty(),
@@ -27,6 +29,8 @@ router.put('/like',
     ], commentController.updateLike
 )
 
-router.delete('/delete/:commentid', commentController.deleteComment)
+router.delete('/delete/:commentid',
+    accessValidation,
+    commentController.deleteComment)
 
 module.exports = router

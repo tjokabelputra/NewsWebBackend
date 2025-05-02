@@ -46,16 +46,22 @@ async function readNewsComment(req, res) {
             WHERE c.newsid = $1`, [newsid]
         )
 
-        const likeStatus = await pool.query(
-            `SELECT l.commentid, l.like_status
-            FROM likedcomment AS l
-            INNER JOIN comment AS c
-            ON l.commentid = c.commentid
-            WHERE c.newsid = $1
-            AND l.uid = $2`, [newsid, uid]
-        )
+        let likeStatus = []
 
-        return res.status(200).json({ message: "Fetch successful", comments: newsComment.rows, likeStatus: likeStatus.rows })
+        if(uid) {
+            const likeQuery = await pool.query(
+                `SELECT l.commentid, l.like_status
+                 FROM likedcomment AS l
+                          INNER JOIN comment AS c
+                                     ON l.commentid = c.commentid
+                 WHERE c.newsid = $1
+                   AND l.uid = $2`, [newsid, uid]
+            )
+
+            likeStatus = likeQuery.rows
+        }
+
+        return res.status(200).json({ message: "Fetch successful", comments: newsComment.rows, likeStatus})
     }
     catch(error){
         return res.status(500).json({ message: error.message })

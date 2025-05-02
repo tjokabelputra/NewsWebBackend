@@ -1,30 +1,15 @@
 const express = require('express')
 const newsController = require('../controller/newsController')
 const { check } = require('express-validator')
-const multer = require('multer')
-
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        filesize: 5 * 1024 * 1024
-    },
-    fileFilter: (req, file, cb) => {
-        if(file.mimetype.startsWith('image/')){
-            cb(null, true)
-        }
-        else{
-            cb(new Error('Not an image file'), false)
-        }
-    }
-})
+const { accessValidation, isAdmin } = require("../middleware/auth");
+const { handleNewsImagesUpload } = require("../middleware/imgUpload");
 
 const router = express.Router()
 
 router.post('/create',
-    upload.fields([
-        { name: 'banner', maxCount: 1},
-        { name: 'image', maxCount: 1}
-    ]),
+    accessValidation,
+    isAdmin,
+    handleNewsImagesUpload,
     [
         check('createdby').not().isEmpty(),
         check('title').not().isEmpty().isLength({ max: 255 }),
@@ -35,6 +20,7 @@ router.post('/create',
 )
 
 router.post('/save',
+    accessValidation,
     [
         check('uid').not().isEmpty(),
         check('newsid').not().isEmpty()
@@ -46,7 +32,6 @@ router.get('/home', newsController.homePageNews)
 router.get('/detail/:newsid',
     [
         check('newsid').not().isEmpty(),
-        check('uid').not().isEmpty()
     ], newsController.newsDetail
 )
 
@@ -57,18 +42,22 @@ router.get('/all/:category',
 )
 
 router.get('/saved/:uid',
+    accessValidation,
     [
         check('uid').not().isEmpty()
     ], newsController.savedNews
 )
 
 router.get('/created/:uid',
+    accessValidation,
+    isAdmin,
     [
         check('uid').not().isEmpty()
     ], newsController.createdNews
 )
 
 router.put('/like',
+    accessValidation,
     [
         check('uid').not().isEmpty(),
         check('newsid').not().isEmpty(),
@@ -83,12 +72,15 @@ router.put('/views/:newsid',
 )
 
 router.delete('/delete/:newsid',
+    accessValidation,
+    isAdmin,
     [
         check('newsid').not().isEmpty()
     ], newsController.deleteNews
 )
 
 router.delete('/unsave',
+    accessValidation,
     [
         check('uid').not().isEmpty(),
         check('newsid').not().isEmpty()

@@ -1,22 +1,8 @@
 const express = require('express')
 const userController = require('../controller/userController')
 const { check } = require('express-validator')
-const multer = require('multer')
-
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 5 * 1024 * 1024
-    },
-    fileFilter: (req, file, cb) => {
-        if(file.mimetype.startsWith('image/')){
-            cb(null, true)
-        }
-        else{
-            cb(new Error('Not an image file'), false)
-        }
-    }
-})
+const { accessValidation, getUserId } = require("../middleware/auth");
+const { handleProfilePictureUpload } = require("../middleware/imgUpload")
 
 const router = express.Router()
 
@@ -35,6 +21,9 @@ router.post('/login',
     ], userController.loginAccount
 )
 
-router.post('/changeprofpic', upload.single('profilePicture'), userController.changeProfilePicture)
+router.post('/changeprofpic/:uid',
+    accessValidation,
+    handleProfilePictureUpload,
+    userController.changeProfilePicture)
 
 module.exports = router

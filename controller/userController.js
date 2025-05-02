@@ -86,15 +86,53 @@ async function changeProfilePicture (req, res) {
             return res.status(400).json({ message: "No image file provided" })
         }
 
-        const userId = req.body.userId
-        if(!userId){
+        const { uid } = req.params
+        if(!uid){
             return res.status(400).json({ message: "User ID is required" })
         }
 
-        const timestamp = Date.now()
-        const filename = `Profile Picture/${userId}_${timestamp}`
-
         const storage = admin.storage().bucket()
+        const defaultProfilePicUrl = "https://firebasestorage.googleapis.com/v0/b/newsweb-ef5bf.firebasestorage.app/o/Profile%20Picture%2FDefault_Profile_Picture.jpg?alt=media&token=ed2096aa-24bf-459a-afbd-b5d1c2424396"
+
+        try {
+            const userProfPic = await pool.query(
+                `SELECT profile_pic
+                FROM users
+                WHERE uid = $1`, [uid]
+            )
+
+            if(userProfPic.rowCount === 0){
+                return res.status(404).json({ message: "User not found"})
+            }
+
+            const existingProfilePic = userProfPic.rows[0].profile_pic
+
+            if(existingProfilePic && existingProfilePic !== defaultProfilePicUrl){
+                if(existingProfilePic.includes(uid)){
+                    const match = existingProfilePic.match(/Profile Picture\/([^?]+)/)
+                    if(match && match[1]){
+                        const existingFileName = match[1]
+                        try{
+                            const existingFile = storage.file(`Profile Picture/${existingFileName}`)
+                            const [exists] = await existingFile.exists()
+
+                            if(exists){
+                                await existingFile.delete()
+                            }
+                        }
+                        catch(error){
+                            return res.status(500).json({ message: error.message })
+                        }
+                    }
+                }
+            }
+        }
+        catch(error){
+            return res.status(500).json({ message: error.message })
+        }
+
+        const timestamp = Date.now()
+        const filename = `Profile Picture/${uid}_${timestamp}`
 
         const fileUpload = storage.file(filename)
 
@@ -117,7 +155,7 @@ async function changeProfilePicture (req, res) {
 
                 const updateResult = await pool.query(
                     `UPDATE users SET profile_pic = $1
-                    WHERE uid = $2 RETURNING *`, [publicUrl, userId]
+                    WHERE uid = $2 RETURNING *`, [publicUrl, uid]
                 )
 
                 if(updateResult.rowCount === 0){

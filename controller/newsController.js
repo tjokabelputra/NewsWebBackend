@@ -186,15 +186,18 @@ async function newsDetail(req, res) {
             WHERE newsid = $1`, [newsid]
         )
 
-        const likeInfo = await pool.query(
-            `SELECT like_status
-            FROM likednews
-            WHERE uid = $1 AND newsid = $2`, [uid, newsid]
-        )
+        let userLikeStatus = null
 
-        let userLikeStatus = null;
-        if (likeInfo.rows.length > 0) {
-            userLikeStatus = likeInfo.rows[0].like_status;
+        if (uid) {
+            const likeInfo = await pool.query(
+                `SELECT like_status
+                FROM likednews
+                WHERE uid = $1 AND newsid = $2`, [uid, newsid]
+            )
+
+            if (likeInfo.rows.length > 0) {
+                userLikeStatus = likeInfo.rows[0].like_status
+            }
         }
 
         const result = {
