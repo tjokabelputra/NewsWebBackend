@@ -1,0 +1,1088 @@
+openapi: 3.0.0
+info:
+  title: News Web API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+  /user/signup:
+    post:
+      summary: Create a new user account
+      description: It create a new user by inputing the new user username, email, password and output all the user information such as id
+      tags: [ User ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - password
+              properties:
+                username:
+                  type: string
+                  description: Username of the new account
+                  example: user1
+                email:
+                  type: string
+                  description: Email of the new account
+                  example: user1@gmail.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  description: Password of the new account
+                  example: user123456
+      responses:
+        201:
+          description: User account created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Account Created Successfully
+                  account:
+                    type: object
+                    properties:
+                      uid:
+                        type: string
+                        example: 176a8468-07c6-492d-8bc9-5f9a409e9415
+                      username:
+                        type: string
+                        example: user1
+                      email:
+                        type: string
+                        example: user1@gmail.com
+                      password:
+                        type: string
+                        example: $2b$10$/J/yT.wM/FKOgmwwmLroaesb2./PqbhMsK09aA9HcX/79vOd.lt7i
+                      role:
+                        type: string
+                        example: User
+                      profile_pic:
+                        type: string
+                        example: https://firebasestorage.googleapis.com/v0/b/newsweb-ef5bf.firebasestorage.app/o/Profile%20Picture%2FDefault_Profile_Picture.jpg?alt=media&token=ed2096aa-24bf-459a-afbd-b5d1c2424396
+        400:
+          description: User Already Exist
+        422:
+          description: Invalid input, please check your data
+        500:
+          description: Internal server error
+
+  /user/login:
+    post:
+      summary: Validate user for log in
+      description: It takes the user email and password as an input then validate it through a query then it return the JWT token
+      tags: [ User ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  description: Username of the intended log in account
+                  example: user1@gmail.com
+                password:
+                  type: string
+                  minLength: 8
+                  description: Password of the intended log in account
+                  example: user123456
+      responses:
+        200:
+          description: user logged in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Login successful
+                  token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiIxNzZhODQ2OC0wN2M2LTQ5MmQtOGJjOS01ZjlhNDA5ZTk0MTUiLCJ1c2VybmFtZSI6InVzZXIxIiwiZW1haWwiOiJ1c2VyMUBnbWFpbC5jb20iLCJyb2xlIjoiVXNlciIsInByb2ZpbGVfcGljIjoiaHR0cHM6Ly9maXJlYmFzZXN0b3JhZ2UuZ29vZ2xlYXBpcy5jb20vdjAvYi9uZXdzd2ViLWVmNWJmLmZpcmViYXNlc3RvcmFnZS5hcHAvby9Qcm9maWxlJTIwUGljdHVyZSUyRkRlZmF1bHRfUHJvZmlsZV9QaWN0dXJlLmpwZz9hbHQ9bWVkaWEmdG9rZW49ZWQyMDk2YWEtMjRiZi00NTlhLWFmYmQtYjVkMWMyNDI0Mzk2IiwiaWF0IjoxNzQ2MTk3MzQyLCJleHAiOjE3NDYyODM3NDJ9.Xt96qiwclD4-y3i3ogtmwQsHvONhIjF83IGgwDHnQCM
+        401:
+          description: Invalid password credential
+        404:
+          description: No account found
+        500:
+          description: Internal server error
+
+  /user/changeprofpic/{uid}:
+    post:
+      summary: Change user profile picture
+      description: Updates the profile picture for a user. Requires authentication and handles image upload.
+      tags: [ User ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema:
+            type: string
+          description: User ID of the account to update
+          example: 176a8468-07c6-492d-8bc9-5f9a409e9415
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - profilePicture
+              properties:
+                profilePicture:
+                  type: string
+                  format: binary
+                  description: The profile picture image file to upload
+      responses:
+        200:
+          description: Profile picture updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Profile picture changed successfully
+                  profilePictureUrl:
+                    type: string
+                    example: https://storage.googleapis.com/newsweb-ef5bf-dev/Profile Picture/176a8468-07c6-492d-8bc9-5f9a409e9415_1746197578611
+        400:
+          description: Bad request, invalid image format or missing required fields
+        404:
+          description: User not found
+        500:
+          description: Internal server error
+
+  /news/create:
+    post:
+      summary: Create a new news. Required admin role
+      description: Create a news by uploading the news image and banner also its title,category, content, and summary it return all the news info
+      tags: [ News ]
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - banner
+                - image
+                - createdby
+                - title
+                - category
+                - content
+                - summary
+              properties:
+                banner:
+                  type: string
+                  format: binary
+                  description: Image for news banner
+                image:
+                  type: string
+                  format: binary
+                  description: Image for news image
+                createdby:
+                  type: string
+                  example: arandomuid
+                title:
+                  type: string
+                  maxLength: 100
+                  example: newstitleexample
+                category:
+                  type: string
+                  example: Politik
+                content:
+                  type: string
+                  example: Lorem ipsum dolor sit amet
+                summary:
+                  type: string
+                  maxLength: 255
+                  example: News summary here
+      responses:
+        200:
+          description: News created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: News created successfully
+                  news:
+                    type: object
+                    properties:
+                      newsid:
+                        type: string
+                        example: randomnewsidhere
+                      createdby:
+                        type: string
+                        example: arandomuid
+                      title:
+                        type: string
+                        example: newstitleexample
+                      category:
+                        type: string
+                        example: Politik
+                      banner_url:
+                        type: string
+                        example: https://example.com/Banner Image/newsid_timestamp
+                      image_url:
+                        type: string
+                        example: https://example.com/News Image/newsid_timestamp
+                      content:
+                        type: string
+                        example: Lorem ipsum dolor sit amet
+                      summary:
+                        type: string
+                        example: insertnewssummary
+                      createdat:
+                        type: string
+                        example: timestamp
+                      views:
+                        type: integer
+                        example: 0
+                      like:
+                        type: integer
+                        example: 0
+        400:
+          description: News banner and image are required
+        422:
+          description: Invalid input, please check your data
+        500:
+          description: Internal server error
+
+  /news/save:
+    post:
+      summary: Save a news
+      description: Save the news by inputing the userid and newsid and saving it into a table that store all the saved news of all user
+      tags: [ News ]
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uid
+                - newsid
+              properties:
+                uid:
+                  type: string
+                  example: 176a8468-07c6-492d-8bc9-5f9a409e9415
+                newsid:
+                  type: string
+                  example: a6a2273a-5983-4b1b-9958-25ab3a8465fc
+      responses:
+        200:
+          description: News successfully saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: News successfully saved
+        422:
+          description: Invalid input, please check your data
+        500:
+          description: Internal server error
+
+  /news/home:
+    get:
+      summary: Get all the news for the homepage
+      description: Get all the news for the hompage containig 3 top liked in the span of 1 month, 4 latest news, and 4 latest news for each categories
+      tags: [ News ]
+      responses:
+        200:
+          description: News successfully fetch
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Fetch successful
+                  topNews:
+                    type: array
+                    description: Top 3 news articles from the past month
+                    items:
+                      type: object
+                      properties:
+                        newsid:
+                          type: string
+                          format: uuid
+                          example: "8d0f9562-c889-4b18-9f57-ebd9fcb5bbc5"
+                        banner_url:
+                          type: string
+                          format: uri
+                          example: "https://storage.googleapis.com/newsweb-ef5bf.firebasestorage.app/News Banner/a24c76a0-4f8a-4a85-8ef0-bbdcaa28c6bf_1746090930153_banner"
+                        category:
+                          type: string
+                          example: "Olahraga"
+                        created_date:
+                          type: string
+                          format: date-time
+                          example: "2025-04-30T17:00:00.000Z"
+                        title:
+                          type: string
+                          example: "Kejurprov Menembak Kalsel 2025 Resmi Dimulai"
+                        summary:
+                          type: string
+                          example: "Kejuaraan Provinsi Menembak Kalimantan Selatan 2025 resmi dibuka di Lapangan Tembak BSR Belitung, dengan tujuan menjaring atlet muda potensial untuk tingkat nasional."
+                  latestAll:
+                    type: array
+                    description: Latest 4 news articles across all categories
+                    items:
+                      type: object
+                      properties:
+                        newsid:
+                          type: string
+                          format: uuid
+                          example: "515bbab7-71bf-4e0b-92d9-de0d6a8da886"
+                        banner_url:
+                          type: string
+                          format: uri
+                          example: "https://storage.googleapis.com/newsweb-ef5bf.firebasestorage.app/News Banner/a24c76a0-4f8a-4a85-8ef0-bbdcaa28c6bf_1746092905843_banner"
+                        category:
+                          type: string
+                          example: "Sains"
+                        created_date:
+                          type: string
+                          format: date-time
+                          example: "2025-04-30T17:00:00.000Z"
+                        title:
+                          type: string
+                          example: "Sains: Mengembalikan Lengkungan Alami Sungai dapat Mencegah Banjir"
+                  latestCat:
+                    type: array
+                    description: 4 latest news articles for each category (Politik, Olahraga, Teknologi, Ekonomi, Sains)
+                    items:
+                      type: object
+                      properties:
+                        newsid:
+                          type: string
+                          format: uuid
+                          example: "594756a4-e808-4ef6-9c27-c93cf2814a2d"
+                        banner_url:
+                          type: string
+                          format: uri
+                          example: "https://storage.googleapis.com/newsweb-ef5bf.firebasestorage.app/News Banner/a24c76a0-4f8a-4a85-8ef0-bbdcaa28c6bf_1746089564700_banner"
+                        username:
+                          type: string
+                          example: "Admin"
+                        category:
+                          type: string
+                          example: "Politik"
+                        created_date:
+                          type: string
+                          format: date-time
+                          example: "2025-04-30T17:00:00.000Z"
+                        title:
+                          type: string
+                          example: "Hasan Nasbi Kirim Surat Pengunduran Diri ke Prabowo sejak 21 April"
+                        rank:
+                          type: string
+                          description: Ranking within its category
+                          example: "1"
+        500:
+          description: Internal server error
+
+  /news/detail/{newsid}:
+    get:
+      summary: Get the detailed info of a news
+      description: Get the detailed info of a news including the title, the author, published date, likes, news image, and news content. User id is optional so if you're not logged in request with an empty uid
+      tags: [ News ]
+      parameters:
+        - in: path
+          name: newsid
+          required: true
+          schema:
+            type: string
+          description: The id of the news to get the detailed information of
+          example: a6a2273a-5983-4b1b-9958-25ab3a8465fc
+        - in: query
+          name: uid
+          required: false
+          schema:
+           type: string
+          description: The user id
+          example: 176a8468-07c6-492d-8bc9-5f9a409e9415
+      responses:
+        200:
+          description: News info successfully fetched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Fetch sucessfull
+                  detail:
+                    type: object
+                    properties:
+                      newsid:
+                        type: string
+                        example: a6a2273a-5983-4b1b-9958-25ab3a8465fc
+                      category:
+                        type: string
+                        example: Teknologi
+                      title:
+                        type: string
+                        example: Kemenprin Siap Gelar Penghargaan Rintisan Teknologi Industri
+                      publisher:
+                        type: string
+                        example: Admin
+                      created_date:
+                        type: string
+                        example: 2025-04-30T17:00:00.000Z
+                      likes:
+                        type: string
+                        example: 0
+                      image_url:
+                        type: string
+                        example: https://storage.googleapis.com/newsweb-ef5bf.firebasestorage.app/News Image/a24c76a0-4f8a-4a85-8ef0-bbdcaa28c6bf_1746091382933_image
+                      content:
+                        type: string
+                        example: Kementerian Perindustrian melalui Badan Standardisasi dan Kebijakan Jasa Industri (BSKJI) kembali menyelenggarakan Penghargaan Rintisan Teknologi Industri (RINTEK) pada tahun 2025. Penghargaan RINTEK merupakan kegiatan tahunan yang telah berlangsung sejak tahun 2006.\n\nKepala BSKJI Kemenperin, Andi Rizaldi mengatakan, penghargaan RINTEK hadir sebagai bentuk apresiasi pemerintah kepada pelaku industri nasional yang telah berhasil menciptakan inovasi teknologi guna mendukung pengembangan proses bisnis serta meningkatkan kemandirian industri dalam negeri.\n\n“Penghargaan RINTEK diberikan sebagai bentuk apresiasi pemerintah kepada perusahaan yang telah menghasilkan rintisan teknologi industri dalam rangka mendorong kemandirian industri nasional dan peningkatan daya saing,” kata Andi dalam keterangannya di Jakarta, Minggu (16/3).\n\nHingga saat ini, penghargaan RINTEK telah diberikan kepada 83 perusahaan atas 121 rintisan teknologi yang dihasilkan. Dengan melibatkan juri yang kompeten di bidang teknologi industri, penghargaan RINTEK terus melahirkan perusahaan-perusahaan industri yang menghasilkan inovasi terbaik di setiap periodenya.\n\nPenghargaan RINTEK juga bertujuan untuk mendorong pelaku industri nasional agar terus melakukan penciptaan teknologi industri guna mengurangi ketergantungan Indonesia terhadap impor barang modal maupun produk hilir. “Dengan adanya penghargaan ini, diharapkan dapat memotivasi perusahaan industri dalam negeri untuk terus meningkatkan kemampuan penguasaan teknologi industri,” ujar Andi.\n\nBagi perusahaan industri yang ingin mengikuti proses seleksi penghargaan RINTEK 2025, mereka dapat mendaftarkan diri secara online melalui tautan bit.ly/PenghargaanRINTEK2025 paling lambat tanggal 14 April 2025. Pendaftaran dilakukan dengan menyampaikan ringkasan rintisan teknologi beserta dokumen kelengkapan administrasi perusahaan.\n\nSetelah itu, akan dilakukan beberapa tahapan seleksi, baik administratif maupun substantif. “Bagi kandidat perusahaan akan ditetapkan sebagai penerima penghargaan RINTEK, selanjutnya akan diundang pada acara Penganugerahan Penghargaan RINTEK yang akan diserahkan langsung oleh Menteri Perindustrian,” imbuhnya.\n\nBagi perusahaan yang ingin mendapatkan informasi lebih lengkap, terkait tata cara pendaftaran peserta penghargaan RINTEK 2025, dapat pula mengunjungi website www.kemenperin.go.id maupun akun resmi media sosial Kementerian Perindustrian Republik Indonesia.
+                      like_status:
+                        type: string
+                        example: null
+        422:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid input, please check your data
+        500:
+          description: Internal server error
+
+  /news/{category}:
+    get:
+      summary: Get all the news from a certain category
+      description: Get all news from certain category or all the news with limits of 100 news. Include search query or empty it to keep getting all the news
+      tags: [ News ]
+      parameters:
+        - in: path
+          name: category
+          required: true
+          schema:
+            type: string
+          description: The category of the news or All for all news
+          example: Ekonomi
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - search
+              properties:
+                search:
+                  type: string
+                  example: Pertumbuhan
+      responses:
+        200:
+          description: News successfully fetched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Fetch successful
+                  news:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uid:
+                          type: string
+                          example: d3f4b716-ef22-4940-826f-516fa93dcabb
+                        banner_url:
+                          type: string
+                          example: https://storage.googleapis.com/newsweb-ef5bf.firebasestorage.app/News Banner/a24c76a0-4f8a-4a85-8ef0-bbdcaa28c6bf_1746092257431_banner
+                        title:
+                          type: string
+                          example: Sri Mulyani Pertahankan Target Pertumbuhan 5,2% meski IMF Pangkas Proyeksi
+                        summary:
+                          type: string
+                          example: Menteri Keuangan Sri Mulyani tetap optimistis terhadap target pertumbuhan ekonomi 5,2% pada 2025, meskipun IMF menurunkan proyeksi Indonesia menjadi 4,7% akibat ketidakpastian global dan tekanan tarif dari AS.
+                        category:
+                          type: string
+                          example: Ekonomi
+                        created_at:
+                          type: string
+                          example: 2025-04-30T17:00:00.000Z
+        500:
+          description: Internal server error
+
+  /news/saved/{uid}:
+    get:
+      summary: Get all the saved news of an account
+      description: Return an array that contain all the news that the user saved
+      tags: [ News ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema:
+            type: string
+          description: The user id of the account that need the saved news displayed
+          example: 176a8468-07c6-492d-8bc9-5f9a409e9415
+      responses:
+        200:
+          description: News successfully fetched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Fetch sucessful
+                  savedNews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        newsid:
+                          type: string
+                          example: 9e751503-2ac4-4ed6-8861-848e1dc26df3
+                        banner_url:
+                          type: string
+                          example: https://storage.googleapis.com/newsweb-ef5bf.firebasestorage.app/News Banner/a24c76a0-4f8a-4a85-8ef0-bbdcaa28c6bf_1746092292971_banner
+                        title:
+                          type: string
+                          example: Pemerintah Cairkan Rp2,3 Triliun untuk Program Makan Bergizi Gratis
+                        summary:
+                          type: string
+                          example: Hingga April 2025, pemerintah telah mencairkan Rp2,3 triliun untuk program makan bergizi gratis, dengan pencairan signifikan sebesar Rp1 triliun pada Maret dan April. Program ini menjadi salah satu prioritas belanja sosial di tengah tekanan fiskal
+                        category:
+                          type: string
+                          example: Ekonomi
+                        createdat:
+                          type: string
+                          example: 2025-04-30T17:00:00.000Z
+        422:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid input, please check your data
+        500:
+          description: Internal server error
+
+  /news/created/{uid}:
+    get:
+      summary: Get all the created news
+      description: Get all the created news by an admin role
+      tags: [ News ]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema:
+            type: string
+          description: The user id of a author that needs all of its news fetched
+          example: a24c76a0-4f8a-4a85-8ef0-bbdcaa28c6bf
+      responses: 
+        200:
+          description: News fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Fetch successful
+                  createdNews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        newsid:
+                          type: string
+                          example: 515bbab7-71bf-4e0b-92d9-de0d6a8da886
+                        banner_url:
+                          type: string
+                          example: https://storage.googleapis.com/newsweb-ef5bf.firebasestorage.app/News Banner/a24c76a0-4f8a-4a85-8ef0-bbdcaa28c6bf_1746092905843_banner
+                        title:
+                          type: string
+                          example: "Sains: Mengembalikan Lengkungan Alami Sungai dapat Mencegah Banjir"
+                        summary:
+                          type: string
+                          example: "Banjir kembali melanda Jakarta dan sekitarnya sejak Minggu (2/3) akibat hujan deras dan meluapnya Bendung Katulampa. Solusi sains: memulihkan lengkungan alami sungai untuk cegah banjir dan ciptakan habitat sehat."
+                        category:
+                          type: string
+                          example: Sains
+                        created_date:
+                          type: string
+                          example: 2025-04-30T17:00:00.000Z
+        422:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid input, please check your data
+        500:
+          description: Internal server error
+
+  /news/like:
+    put:
+      summary: Update the news like status
+      description: Update the like news table whether it's to add like status or change existing like status
+      tags: [ News ]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uid
+                - newsid
+                - pressed
+              properties:
+                uid:
+                  type: string
+                  example: 176a8468-07c6-492d-8bc9-5f9a409e9415
+                newsid:
+                  type: string
+                  example: 9e751503-2ac4-4ed6-8861-848e1dc26df3
+                pressed:
+                  type: string
+                  example: Like
+      responses:
+        200:
+          description: Like updated successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Like status updated successfully
+        422:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid input, please check your data
+        500:
+          description: Internal server error
+
+  /news/views/{newsid}:
+    put:
+      summary: Update the news views count
+      description: Update the news views count when a user views the news
+      tags: [ News ]
+      parameters:
+        - in: path
+          name: newsid
+          required: true
+          schema:
+            type: string
+          description: The id of the news that need update to its view
+          example: 9e751503-2ac4-4ed6-8861-848e1dc26df3
+      responses:
+        200:
+          description: Views updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Views updated successfully
+        422:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid input, please check your data
+        500:
+          description: Internal server error
+
+  /news/delete/{newsid}:
+    delete:
+      summary: Delete news
+      description: Delete the news that the author want to delete
+      tags: [ News ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: newsid
+          required: true
+          schema:
+            type: string
+          description: The id of the news that need to be deleted
+          example: 9e751503-2ac4-4ed6-8861-848e1dc26df3
+      responses:
+        200:
+          description: News successfully deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: News successfully deleted
+        422:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid input, please check your data
+        500:
+          description: Internal server error
+
+  /news/unsave:
+    delete:
+      summary: Unsave news
+      description: Unsave the news from an account
+      tags: [ News ]
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content: 
+          application/json:
+            schema:
+              type: object
+              required:
+                - uid
+                - newsid
+              properties:
+                uid:
+                  type: string
+                  example: 176a8468-07c6-492d-8bc9-5f9a409e9415
+                newsid:
+                  type: string
+                  example: 9e751503-2ac4-4ed6-8861-848e1dc26df3
+      responses:
+        200:
+          description: News successfully unsaved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: News successfully removed
+        422:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid input, please check your data
+        500:
+          description: Internal server error
+
+  /comment/create:
+    post:
+      summary: Create a comment
+      description: Create a comment for a particular news
+      tags: [ Comment ]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:  
+                - uid
+                - newsid
+                - comment
+              properties:
+                uid:
+                  type: string
+                  example: 176a8468-07c6-492d-8bc9-5f9a409e9415
+                newsid:
+                  type: string
+                  example: 9e751503-2ac4-4ed6-8861-848e1dc26df3
+                comment:
+                  type: string
+                  example: Apakah dana segitu cukup untuk memenuhi kebutuhan gizi untuk para siswa yang membutuhkan
+      responses:
+        201:
+          description: Comment successfully created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Comment successfully created
+                  comment:
+                    type: object
+                    properties:
+                      commentid:
+                        type: string
+                        example: 6df5698e-c6bc-4f6f-b008-c3bf8297a8e4
+                      uid:
+                        type: string
+                        example: 176a8468-07c6-492d-8bc9-5f9a409e9415
+                      newsid:
+                        type: string
+                        example: 9e751503-2ac4-4ed6-8861-848e1dc26df3
+                      comment:
+                        type: string
+                        example: Apakah dana segitu cukup untuk memenuhi kebutuhan gizi untuk para siswa yang membutuhkan
+                      votes:
+                        type: integer
+                        example: 0
+                      createdat:
+                        type: string
+                        example: 2025-05-03T14:13:19.663Z
+        422:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid input, please check your data
+        500:
+          description: Internal server error
+          
+  /comment/newsComment:
+    get:
+      summary: Get a comment in a news
+      description: Get a comment in a news and also the user like status of the comment. User that is not logged in can fill an empty uid
+      tags: [ Comment ]
+      parameters:
+        - in: query
+          name: uid
+          required: false
+          schema:
+            type: string
+            example: 176a8468-07c6-492d-8bc9-5f9a409e9415
+          description: Optional user ID. Can be empty if the user is not logged in.
+        - in: query
+          name: newsid
+          required: true
+          schema:
+            type: string
+            example: 9e751503-2ac4-4ed6-8861-848e1dc26df3
+          description: The ID of the news article.
+      responses:
+        200:
+          description: News comment fetch successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Fetch successful
+                  comments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        commentid: 
+                          type: string
+                          example: 6df5698e-c6bc-4f6f-b008-c3bf8297a8e4
+                        username:
+                          type: string
+                          example: user1
+                        createdat:
+                          type: string
+                          example: 2025-05-03T14:13:19.663Z
+                        comment:
+                          type: string
+                          example: Apakah dana segitu cukup untuk memenuhi kebutuhan gizi untuk para siswa yang membutuhkan
+                        votes:
+                          type: integer
+                          example: 1
+                  likeStatus:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        commentid: 
+                          type: string
+                          example: 6df5698e-c6bc-4f6f-b008-c3bf8297a8e4pda
+                        like_status:
+                          type: string
+                          example: Like
+        422:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid input, please check your data
+        500:
+          description: Internal server error
+
+  /comment/like:
+    put:
+      summary: Update comment like
+      description: Update comment like of an account whether the account has liked/dislike before or not
+      tags: [ Comment ]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uid
+                - commentid
+                - pressed
+              properties:
+                uid:
+                  type: string
+                  example: 176a8468-07c6-492d-8bc9-5f9a409e9415
+                commentid:
+                  type: string
+                  example: 6df5698e-c6bc-4f6f-b008-c3bf8297a8e4
+                pressed:
+                  type: string
+                  example: Like
+      responses:
+        200:
+          description: Like update successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Like status changed successfully
+        422:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid input, please check your data
+        500:
+          description: Internal server error
+          
+  /comment/delete/{commentid}:
+    delete:
+      summary: Delete comment
+      description: Delete comment from the table and all its like status
+      tags: [ Comment ]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: commentid
+          required: true
+          schema:
+            type: string
+          description: The id of the comment that is going to delete
+          example: 6df5698e-c6bc-4f6f-b008-c3bf8297a8e4
+      responses:
+        200:
+          description: Comment deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Comment successfully deleted
+        422:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid input, please check your data
+        500:
+          description: Internal server error

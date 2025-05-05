@@ -1,3 +1,5 @@
 node_modules
-.env
+.env.dev
+.env.test
+.env.prod
 newsweb-ef5bf-firebase-adminsdk-fbsvc-3f13a54e64.json

@@ -162,10 +162,7 @@ async function changeProfilePicture (req, res) {
                     return res.status(404).json({ message: "User not found"})
                 }
 
-                res.status(200).json({ message: "Profile picture changed successfully", 
-                    profilePictureUrl: publicUrl, 
-                    user: updateResult.rows[0]
-                })
+                res.status(200).json({ message: "Profile picture changed successfully", profilePictureUrl: publicUrl })
             }
             catch(error){
                 res.status(500).json({ message: error.message })

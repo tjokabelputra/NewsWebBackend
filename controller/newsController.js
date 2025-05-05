@@ -148,7 +148,7 @@ async function homePageNews(req, res) {
         )
 
         return res.status(200).json({ 
-            message: "Fetch successfull",
+            message: "Fetch successful",
             topNews: threeTop.rows,
             latestAll: latestAll.rows,
             latestCat: latestCategories.rows
@@ -167,7 +167,7 @@ async function newsDetail(req, res) {
     }
 
     const { newsid } = req.params
-    const { uid } = req.body
+    const { uid } = req.query
 
     try{
         const newsDetail = await pool.query(
@@ -175,7 +175,7 @@ async function newsDetail(req, res) {
                 n.newsid, 
                 n.category, 
                 n.title, 
-                u.username, 
+                u.username AS publisher, 
                 n.createdat::date AS created_date, 
                 n.likes, 
                 n.image_url, 
@@ -250,7 +250,7 @@ async function allNews(req, res) {
 
         const result = await pool.query(query, value)
 
-        return res.status(200).json({ message: "Fetch successfull", news: result.rows })
+        return res.status(200).json({ message: "Fetch successful", news: result.rows })
     }
     catch(error){
         return res.status(500).json({ message: error.message })
@@ -283,7 +283,7 @@ async function savedNews(req, res) {
             WHERE s.uid = $1`, [uid]
         )
 
-        return res.status(200).json({ message: "Fetch successfull", savedNews: savedNews.rows})
+        return res.status(200).json({ message: "Fetch successful", savedNews: savedNews.rows})
     }
     catch(error){
         return res.status(500).json({ message: error.message })
@@ -309,10 +309,11 @@ async function createdNews(req, res) {
                 category,
                 createdat::date as created_date
             FROM news
-            WHERE createdby = $1`, [uid]
+            WHERE createdby = $1
+            ORDER BY createdat DESC`, [uid]
         )
 
-        return res.status(200).json({ message: "Fetch successfull", createdNews: createdNews.rows})
+        return res.status(200).json({ message: "Fetch successful", createdNews: createdNews.rows})
     }
     catch(error){
         return res.status(500).json({ message: error.message })
@@ -492,13 +493,13 @@ async function unsaveNews(req, res) {
     const { uid, newsid } = req.body
 
     try{
-        await pool.query(
+        const deletedNews = await pool.query(
             `DELETE FROM savednews
             WHERE uid = $1 AND newsid = $2
             RETURNING *`, [uid, newsid]
         )
         
-        return res.status(200).json({ message: "News sunccessfully removed" })
+        return res.status(200).json({ message: "News successfully removed" })
     }
     catch(error){
         return res.status(500).json({ message: error.message })

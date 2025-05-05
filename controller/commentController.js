@@ -30,7 +30,7 @@ async function readNewsComment(req, res) {
         return res.status(422).json({ message: "Invalid input, please check your data" })
     }
 
-    const { uid, newsid } = req.body
+    const { uid, newsid } = req.query
 
     try{
         const newsComment = await pool.query(
