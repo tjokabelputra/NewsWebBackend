@@ -11,12 +11,30 @@ async function createComment(req, res) {
     const { uid, newsid, comment } = req.body
 
     try{
-        const newComment = await pool.query(
+        const insertResult = await pool.query(
             `INSERT INTO comment (uid, newsid, comment)
             VALUES ($1, $2, $3) RETURNING *`, [uid, newsid, comment]
         )
 
-        return res.status(201).json({ message: "Comment successfully created", comment: newComment.rows[0]})
+        if (insertResult.rows.length === 0) {
+            return res.status(500).json({ message: "Failed to create comment." })
+        }
+
+        const newCommentId = insertResult.rows[0].commentid;
+
+        const selectResult = await pool.query(
+            `SELECT c.*, u.profile_pic as commentator_pp, u.username
+             FROM comment c
+             INNER JOIN users u ON c.uid = u.uid
+             WHERE c.commentid = $1`,
+            [newCommentId]
+        )
+
+        if (selectResult.rows.length === 0) {
+            return res.status(500).json({ message: "Failed to retrieve comment data." })
+        }
+
+        return res.status(201).json({ message: "Comment successfully created", comment: selectResult.rows[0]})
     }
     catch(error){
         return res.status(500).json({ message: error.message })
@@ -36,6 +54,8 @@ async function readNewsComment(req, res) {
         const newsComment = await pool.query(
             `SELECT 
                 c.commentid,
+                u.uid,
+                u.profile_pic as commentator_pp,
                 u.username, 
                 c.createdat, 
                 c.comment, 
@@ -43,7 +63,8 @@ async function readNewsComment(req, res) {
             FROM comment AS c
             INNER JOIN users AS u
             ON c.uid = u.uid
-            WHERE c.newsid = $1`, [newsid]
+            WHERE c.newsid = $1
+            ORDER BY createdat DESC `, [newsid]
         )
 
         let likeStatus = []

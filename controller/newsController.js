@@ -102,6 +102,9 @@ async function saveNews(req, res) {
 }
 
 async function homePageNews(req, res) {
+
+    const { uid } = req.query
+
     try{
         const threeTop = await pool.query(
             `SELECT 
@@ -135,6 +138,7 @@ async function homePageNews(req, res) {
                 SELECT 
                     n.newsid,
                     n.banner_url,
+                    u.profile_pic as auth_pp,
                     u.username,
                     n.category,
                     n.createdat::date as created_date,
@@ -147,11 +151,32 @@ async function homePageNews(req, res) {
             WHERE rank <= 4`
         )
 
+        let savedNewsIds = []
+
+        if(uid){
+            const topNewsIds = threeTop.rows.map(news => news.newsid);
+            const latestAllIds = latestAll.rows.map(news => news.newsid);
+            const latestCatIds = latestCategories.rows.map(news => news.newsid);
+
+            const allNewsIds = [...new Set([...topNewsIds, ...latestAllIds, ...latestCatIds])];
+
+            if (allNewsIds.length > 0) {
+                const savedNewsResult = await pool.query(
+                    `SELECT newsid FROM savednews 
+                     WHERE uid = $1 AND newsid = ANY($2::uuid[])`,
+                    [uid, allNewsIds]
+                );
+
+                savedNewsIds = savedNewsResult.rows.map(row => row.newsid);
+            }
+        }
+
         return res.status(200).json({ 
             message: "Fetch successful",
             topNews: threeTop.rows,
             latestAll: latestAll.rows,
-            latestCat: latestCategories.rows
+            latestCat: latestCategories.rows,
+            savedNewsIds: savedNewsIds
         })
     }
     catch(error){
@@ -175,7 +200,8 @@ async function newsDetail(req, res) {
                 n.newsid, 
                 n.category, 
                 n.title, 
-                u.username AS publisher, 
+                u.profile_pic AS auth_pp,
+                u.username AS author, 
                 n.createdat::date AS created_date, 
                 n.likes, 
                 n.image_url, 
@@ -200,12 +226,7 @@ async function newsDetail(req, res) {
             }
         }
 
-        const result = {
-            ...newsDetail.rows[0],
-            like_status: userLikeStatus
-        }
-
-        return res.status(200).json({ message: "Fetch sucessfull", detail: result })
+        return res.status(200).json({ message: "Fetch sucessfull", detail: newsDetail.rows[0], like_status: userLikeStatus })
     }
     catch(error){
         return res.status(500).json({ message: error.message })
@@ -215,7 +236,7 @@ async function newsDetail(req, res) {
 async function allNews(req, res) {
     
     const { category } = req.params 
-    const { search = "" } = req.body
+    const { search, uid } = req.query
 
     try{
         let query = `
@@ -229,18 +250,18 @@ async function allNews(req, res) {
         FROM news`
         const value = []
 
-        if( category !== "All" ){
+        if( category !== "Semua Berita" ){
             query += ` WHERE category = $1`
             value.push(category)
         }
 
         if(search){
-            if(category !== "All"){
-                query += ` AND title ILIKE $2`
+            if(category !== "Semua Berita"){
+                query += ` AND (title ILIKE $2 OR summary ILIKE $2)`
                 value.push(`%${search}%`)
             }
             else{
-                query += ` WHERE title ILIKE $1`
+                query += ` WHERE title ILIKE $1 OR summary ILIKE $1`
                 value.push(`%${search}%`)
             }
         }
@@ -250,7 +271,23 @@ async function allNews(req, res) {
 
         const result = await pool.query(query, value)
 
-        return res.status(200).json({ message: "Fetch successful", news: result.rows })
+        let savedNewsIds = []
+
+        if(uid){
+            const categoriesNews = result.rows.map(news => news.newsid);
+
+            if (categoriesNews.length > 0) {
+                const savedNewsResult = await pool.query(
+                    `SELECT newsid FROM savednews 
+                     WHERE uid = $1 AND newsid = ANY($2::uuid[])`,
+                    [uid, categoriesNews]
+                );
+
+                savedNewsIds = savedNewsResult.rows.map(row => row.newsid);
+            }
+        }
+
+        return res.status(200).json({ message: "Fetch successful", news: result.rows, savedNewsIds: savedNewsIds })
     }
     catch(error){
         return res.status(500).json({ message: error.message })

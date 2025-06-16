@@ -162,7 +162,28 @@ async function changeProfilePicture (req, res) {
                     return res.status(404).json({ message: "User not found"})
                 }
 
-                res.status(200).json({ message: "Profile picture changed successfully", profilePictureUrl: publicUrl })
+                const updatedUser = await pool.query(
+                    `SELECT uid, username, email, role, profile_pic
+                    FROM users
+                    WHERE uid = $1`, [uid]
+                )
+
+                if(updatedUser.rowCount === 0){
+                    return res.status(404).json({ message: "User not found"})
+                }
+
+                const payload = {
+                    uid: updatedUser.rows[0].uid,
+                    username: updatedUser.rows[0].username,
+                    email: updatedUser.rows[0].email,
+                    role: updatedUser.rows[0].role,
+                    profile_pic: publicUrl
+                }
+
+                const secret = process.env.JWT_SECRET
+                const newToken = jwt.sign(payload, secret, { expiresIn: '1d' })
+
+                res.status(200).json({ message: "Profile picture changed successfully", profilePictureUrl: publicUrl, newToken: newToken })
             }
             catch(error){
                 res.status(500).json({ message: error.message })
